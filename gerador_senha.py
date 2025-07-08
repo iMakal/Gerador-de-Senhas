@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import ttk  
 from tkinter import messagebox
 import random
 import string
@@ -9,8 +10,8 @@ root.iconbitmap("boticon.ico")
 
 
 # Define tamanho fixo
-largura_janela = 500
-altura_janela = 300
+largura_janela = 600
+altura_janela = 600
 root.minsize(largura_janela, altura_janela)
 root.resizable(False, False)
 
@@ -28,6 +29,17 @@ incluir_minusculas = tk.BooleanVar()
 incluir_numeros = tk.BooleanVar()
 incluir_especiais = tk.BooleanVar()
 comprimento_var = tk.IntVar(value=12)
+
+# Estilo da barra de força
+style = ttk.Style()
+style.theme_use('clam')
+
+style.configure("red.Horizontal.TProgressbar", troughcolor='gray', background='red')
+style.configure("yellow.Horizontal.TProgressbar", troughcolor='gray', background='yellow')
+style.configure("green.Horizontal.TProgressbar", troughcolor='gray', background='green')
+style.configure("blue.Horizontal.TProgressbar", troughcolor='gray', background='blue')
+
+
 
 # Funções
 def gerar_senha():
@@ -53,10 +65,78 @@ def gerar_senha():
     senha = ''.join(random.choices(caracteres_possiveis, k=comprimento))
     resultado_var.set(senha)
 
-# Label para mensagens
+    # Atualiza barra de força e texto
+    forca_texto, pontuacao = avaliar_forca_senha(senha)
+    atualizar_barra_forca(forca_texto, pontuacao)
+    barra_forca["value"] = pontuacao
+    label_forca["text"] = f"Força da senha: {forca_texto}"
+
+
+
+def avaliar_forca_senha(senha):
+    pontuacao = 0
+    comprimento = len(senha)
+
+    # Presença dos tipos de caracteres
+    upper_case = any(c.isupper() for c in senha)
+    lower_case = any(c.islower() for c in senha)
+    special = any(c in string.punctuation for c in senha)
+    digit = any(c.isdigit() for c in senha)
+
+    # Contar caracteres repetidos consecutivos
+    repetidos = 0
+    for i in range(1, comprimento):
+        if senha[i] == senha[i-1]:
+            repetidos += 1
+
+    # Avaliação de comprimento
+    if comprimento >= 8:
+        pontuacao += 1
+    if comprimento >= 12:
+        pontuacao += 1
+    if comprimento >= 16:
+        pontuacao += 2  # mais peso para senhas mais longas
+
+    # Diversidade de caracteres
+    tipos = sum([upper_case, lower_case, digit, special])
+    pontuacao += tipos * 2  # peso maior para variedade
+
+    # Penaliza repetições consecutivas
+    if repetidos > 0:
+        pontuacao -= repetidos  # diminui pontuação para repetições
+
+    # Limita pontuação mínima a 0
+    pontuacao = max(pontuacao, 0)
+
+    # Avaliação final
+    if pontuacao <= 3:
+        return "Fraca", pontuacao
+    elif pontuacao <= 5:
+        return "Moderada", pontuacao
+    elif pontuacao <= 8:
+        return "Forte", pontuacao
+    else:
+        return "Muito Forte", pontuacao
+    
+
+def atualizar_barra_forca(forca_texto, pontuacao):
+    barra_forca["value"] = pontuacao
+    label_forca["text"] = f"Força da senha: {forca_texto}"
+
+    if forca_texto == "Fraca":
+        barra_forca.configure(style="red.Horizontal.TProgressbar")
+    elif forca_texto == "Moderada":  # alinhado com o retorno da avaliação
+        barra_forca.configure(style="yellow.Horizontal.TProgressbar")
+    elif forca_texto == "Forte":
+        barra_forca.configure(style="green.Horizontal.TProgressbar")
+    else:  # Muito Forte
+        barra_forca.configure(style="blue.Horizontal.TProgressbar")
+
+
+# Label mensagens
 mensagem_var = tk.StringVar()
 mensagem_label = tk.Label(root, textvariable=mensagem_var, fg="green")
-mensagem_label.grid(row=5, column=0, columnspan=2, pady=(0,20))
+mensagem_label.grid(row=6, column=0, columnspan=2, pady=(0,20))
 
 def copiar_para_clipboard():
     senha = resultado_var.get()
@@ -69,7 +149,7 @@ def copiar_para_clipboard():
     # Apaga a mensagem após 3 segundos
     root.after(3000, lambda: mensagem_var.set(""))
 
-# Layout usando grid
+
 
 # Label para o resultado
 tk.Label(root, text="Senha gerada:").grid(row=0, column=0, sticky="w", padx=20, pady=(20, 5))
@@ -96,12 +176,19 @@ tk.Label(frame_comprimento, text="Comprimento da senha:").pack(side="left")
 tk.Spinbox(frame_comprimento, from_=4, to=32, textvariable=comprimento_var, width=5, state="readonly").pack(side="left", padx=5)
 tk.Label(frame_comprimento, text="(Min: 4 Max: 32)").pack(side="left")
 
+# Label força da senha
+label_forca = tk.Label(root, text="Força da senha:", width=25, anchor="w")
+barra_forca = ttk.Progressbar(root, orient="horizontal", length=200, mode="determinate", maximum=10)
+label_forca.grid(row=4, column=0, sticky="w", padx=20, pady=(15, 0))
+barra_forca.grid(row=4, column=1, padx=20, pady=(15, 20), sticky="ew")
+
+
 # Botões lado a lado
 btn_gerar = tk.Button(root, text="Gerar Senha", command=gerar_senha)
 btn_copiar = tk.Button(root, text="Copiar senha", command=copiar_para_clipboard)
 
-btn_gerar.grid(row=4, column=0, pady=20, padx=(20,10), sticky="ew")
-btn_copiar.grid(row=4, column=1, pady=20, padx=(10,20), sticky="ew")
+btn_gerar.grid(row=5, column=0, pady=20, padx=(20,10), sticky="ew")
+btn_copiar.grid(row=5, column=1, pady=20, padx=(10,20), sticky="ew")
 
 # Configura colunas para expandir
 root.grid_columnconfigure(0, weight=1)
